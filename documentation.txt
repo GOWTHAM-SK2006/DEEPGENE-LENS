@@ -1,0 +1,1374 @@
+DeepGeneLens
+Complete Technical Documentation
+================================
+
+Document purpose
+----------------
+This document explains the currently implemented DeepGeneLens source code,
+data pipeline, trained model, API, React frontend, and PDF report workflow.
+It describes the actual implementation in this repository. Planned features
+are explicitly marked as future or not implemented.
+
+
+1. PROJECT OVERVIEW
+===================
+
+DeepGeneLens is a research-prototype web application for analysing DNA
+sequences stored in FASTA files. It combines:
+
+1. FASTA parsing with Biopython.
+2. DNA validation and nucleotide statistics.
+3. A trained PyTorch 1D convolutional neural network for experimental
+   viral-family classification.
+4. A React/Vite user interface.
+5. A FastAPI REST backend.
+6. ReportLab PDF report generation.
+
+The project is not a clinical diagnostic system. Predictions are experimental
+research outputs and must not be used for medical diagnosis or treatment.
+
+Main objective
+--------------
+The application accepts one or more DNA records in FASTA format, calculates
+transparent sequence statistics, optionally runs a trained viral-family
+classifier, and produces a professional PDF report.
+
+Input
+-----
+- A FASTA file with extension .fasta, .fa, or .fna.
+- One or more FASTA records.
+- DNA bases are expected to be A, T, G, and C for model prediction.
+
+Output
+------
+- Sequence count.
+- Total number of bases.
+- DNA validity status.
+- Invalid-base count.
+- A/T/G/C composition percentages.
+- Overall GC percentage.
+- Per-record sequence ID, length, and GC percentage.
+- Optional CNN viral-family prediction and confidence.
+- Optional PDF report.
+
+Important scope boundary
+------------------------
+The current application does not implement:
+
+- Clinical diagnosis.
+- Clinical validation.
+- Explainable-AI feature attribution.
+- CNN-LSTM inference.
+- DNABERT inference.
+- User registration and login.
+- PostgreSQL persistence.
+- Analysis-history storage.
+- Cloud deployment.
+
+The explainability folder exists as a preparation point, but no explanation
+algorithm is currently connected to the prediction response.
+
+
+2. TECHNOLOGY STACK
+===================
+
+Frontend
+--------
+- React 18: component-based user interface.
+- Vite: development server and production bundler.
+- JavaScript/JSX: frontend implementation.
+- lucide-react: accessible interface icons.
+- CSS: responsive premium biotechnology SaaS styling.
+
+Backend
+-------
+- Python: application and machine-learning language.
+- FastAPI: REST API framework and automatic OpenAPI/Swagger documentation.
+- Uvicorn: ASGI server.
+- python-multipart: multipart file upload handling.
+- python-dotenv: environment-variable loading.
+
+Bioinformatics
+-------------
+- Biopython 1.85.
+- Bio.SeqIO parses FASTA and GenBank records.
+- Bio.Entrez accesses NCBI Entrez E-utilities for dataset preparation.
+
+Machine learning
+----------------
+- PyTorch: model definition, training, checkpoint loading, and inference.
+- NumPy: deterministic training support and random seeding.
+- scikit-learn: accuracy, precision, recall, F1, confusion matrix, and
+  classification-report calculation.
+
+Reports
+-------
+- ReportLab: paginated PDF generation, tables, flowables, charts, cover page,
+  headers, footers, and page numbers.
+
+
+3. PROJECT STRUCTURE
+====================
+
+DeepGeneLens/
+|
+|-- backend/
+|   |-- app/
+|   |   |-- main.py
+|   |   |-- config.py
+|   |   |-- bioinformatics/
+|   |   |   `-- fasta.py
+|   |   |-- datasets/
+|   |   |   `-- refseq_viral.py
+|   |   |-- models/
+|   |   |   |-- cnn.py
+|   |   |   `-- train_cnn.py
+|   |   |-- routes/
+|   |   |   |-- health.py
+|   |   |   |-- uploads.py
+|   |   |   `-- predict.py
+|   |   |-- reports/
+|   |   |   `-- pdf.py
+|   |   `-- explainability/
+|   |       `-- __init__.py
+|   |-- requirements.txt
+|   |-- .env.example
+|   `-- .venv/
+|
+|-- frontend/
+|   |-- src/
+|   |   |-- main.jsx
+|   |   |-- App.jsx
+|   |   `-- styles.css
+|   |-- package.json
+|   |-- vite.config.js
+|   `-- .env.example
+|
+|-- artifacts/
+|   |-- viral_family_cnn.pt
+|   `-- viral_family_cnn.metrics.json
+|
+|-- data/
+|   `-- refseq_viral_large/
+|       |-- raw/
+|       |-- processed/
+|       `-- manifests/
+|
+|-- verification_artifacts/
+|   `-- end-to-end verification files, FASTA files, JSON files, and PDFs
+|
+|-- README.md
+|-- WORKFLOW.txt
+`-- documentation.txt
+
+Folder responsibilities
+-----------------------
+
+backend/app/main.py
+    Creates the FastAPI application, configures CORS, and registers route
+    modules.
+
+backend/app/config.py
+    Reads APP_NAME and FRONTEND_ORIGINS from environment variables. The
+    default origins are http://localhost:5173 and http://127.0.0.1:5173.
+
+backend/app/bioinformatics/fasta.py
+    Provides the reusable summarize_fasta function and FASTA validation
+    helpers.
+
+backend/app/datasets/refseq_viral.py
+    Downloads NCBI RefSeq viral complete-genome records, extracts taxonomy
+    family labels, removes unsuitable records, clusters similar sequences,
+    creates dataset splits, and writes manifests.
+
+backend/app/models/cnn.py
+    Defines the shared DNA encoder and DNA1DCNN architecture. It also writes
+    the checkpoint containing weights, label mapping, max sequence length, and
+    model metadata.
+
+backend/app/models/train_cnn.py
+    Loads split CSV files, trains the CNN, selects the best validation-loss
+    state, evaluates the held-out test set, and saves the checkpoint and
+    metrics metadata.
+
+backend/app/routes/health.py
+    Implements GET /api/health.
+
+backend/app/routes/uploads.py
+    Implements FASTA statistics and PDF report endpoints.
+
+backend/app/routes/predict.py
+    Validates uploaded FASTA input, loads the real checkpoint, preprocesses
+    sequences using the saved contract, and returns real model predictions.
+
+backend/app/reports/pdf.py
+    Builds the branded multi-page ReportLab PDF.
+
+frontend/src/App.jsx
+    Contains the main React page, backend health check, file selection,
+    drag-and-drop behavior, FASTA upload, prediction request, and PDF
+    download logic.
+
+frontend/src/styles.css
+    Contains the responsive layout and visual design.
+
+
+4. ARCHITECTURE
+===============
+
+The actual communication architecture is:
+
+```mermaid
+flowchart LR
+    User[User] --> Browser[React + Vite frontend]
+    Browser -->|multipart/form-data| API[FastAPI backend]
+    API --> FASTA[Biopython FASTA parser]
+    FASTA --> Stats[DNA validation and statistics]
+    API --> CNNRoute[Prediction route]
+    CNNRoute --> Encoder[A/C/G/T one-hot encoder]
+    Encoder --> CNN[PyTorch 1D-CNN]
+    CNN --> Prediction[Family and probability confidence]
+    Stats --> PDF[ReportLab PDF generator]
+    Prediction --> PDF
+    PDF --> Download[PDF download]
+    NCBI[NCBI RefSeq via Entrez] --> Pipeline[Dataset pipeline]
+    Pipeline --> Train[Training and evaluation]
+    Train --> Checkpoint[viral_family_cnn.pt]
+    Checkpoint --> CNN
+```
+
+Runtime request flow
+--------------------
+
+1. The browser loads the React application from Vite.
+2. React reads VITE_API_BASE_URL. If absent, it uses
+   http://localhost:8000.
+3. React calls GET /api/health to display backend status.
+4. The user selects a FASTA file.
+5. React creates FormData and appends the file under the field name "file".
+6. FastAPI receives the multipart request.
+7. The route checks the filename extension.
+8. Biopython parses the file.
+9. DNA statistics are calculated and returned as JSON.
+10. The user may request CNN prediction.
+11. The prediction route validates that every base is A, T, G, or C.
+12. The route loads artifacts/viral_family_cnn.pt on CPU.
+13. The shared encoder creates a four-channel tensor.
+14. The CNN produces class logits.
+15. Softmax converts logits to class probabilities.
+16. The highest probability becomes the predicted family and confidence.
+17. React displays the result.
+18. React can send the original file and optional prediction metadata to the
+    PDF endpoint.
+
+
+5. FRONTEND IMPLEMENTATION
+==========================
+
+Entry point
+-----------
+frontend/src/main.jsx:
+
+- Imports React.
+- Creates the root React node.
+- Renders App inside React.StrictMode.
+- Imports styles.css.
+
+API configuration
+-----------------
+In frontend/src/App.jsx:
+
+    const apiBaseUrl =
+      import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
+This means:
+
+- Local development works without an environment file.
+- A different backend can be configured with VITE_API_BASE_URL.
+- API URLs are not hardcoded individually in every handler.
+
+Frontend state
+--------------
+
+connection
+    Stores checking, connected, or offline backend state.
+
+selectedFile
+    Stores the File object selected by the user.
+
+uploadState
+    Stores idle, uploading, success, or error state for FASTA analysis.
+
+summary
+    Stores the JSON response from /api/uploads/fasta.
+
+predictionState
+    Stores prediction status, prediction list, and model metadata.
+
+reportState
+    Stores idle, loading, ready, or error state for PDF generation.
+
+mobileMenuOpen
+    Controls the responsive navigation menu.
+
+File workflow
+-------------
+
+chooseFile(file):
+
+- Saves the selected File object.
+- Clears previous summary and predictions.
+- Resets upload status.
+
+clearFile():
+
+- Removes the selected file.
+- Clears previous results.
+- Resets the HTML file input.
+
+handleUpload(event):
+
+1. Prevents the default form event.
+2. Creates FormData.
+3. Appends the selected file as "file".
+4. Sends POST /api/uploads/fasta.
+5. Parses the JSON response.
+6. Displays error details when the response is not successful.
+7. Stores the returned analysis summary.
+8. Scrolls to the results section.
+
+runPrediction():
+
+1. Creates FormData with the selected file.
+2. Sends POST /api/analysis/predict.
+3. Reads predictions and model metadata.
+4. Stores the real response in predictionState.
+5. Displays the predicted family and confidence.
+
+downloadReport():
+
+1. Creates FormData with the selected FASTA file.
+2. Adds predictions_json only if a real prediction exists.
+3. Adds model_metadata_json only with the real model response.
+4. Sends POST /api/uploads/report.
+5. Reads the response as a PDF Blob.
+6. Creates a temporary browser download link.
+7. Downloads deepgenelens-analysis.pdf.
+8. Revokes the Blob URL after a short delay.
+
+The delay before URL revocation is intentional. Immediate revocation can
+cancel or prevent a browser from consuming the generated PDF.
+
+Visible interface sections
+--------------------------
+
+- Responsive navigation bar.
+- Hero section.
+- FASTA drag-and-drop/upload panel.
+- Verified dataset/model metric strip.
+- Five-step workflow.
+- Model architecture overview.
+- Responsible research disclaimer.
+- Results summary.
+- DNA composition.
+- Sequence details.
+- AI prediction card.
+- PDF report button.
+
+The frontend does not generate predictions locally. All predictions come from
+the FastAPI prediction endpoint.
+
+
+6. FASTAPI APPLICATION
+======================
+
+Application initialization
+---------------------------
+backend/app/main.py creates:
+
+    app = FastAPI(...)
+
+It then adds CORSMiddleware with:
+
+- allow_origins from configuration.
+- allow_credentials=True.
+- allow_methods=["*"].
+- allow_headers=["*"].
+
+Routers are mounted as:
+
+- health_router with prefix /api.
+- uploads_router with prefix /api/uploads.
+- predict_router with prefix /api/analysis.
+
+Root endpoint
+-------------
+
+GET /
+
+Response:
+
+    {
+      "message": "Welcome to DeepGeneLens",
+      "description": "AI Genomic Analysis Platform research prototype"
+    }
+
+Swagger
+-------
+
+GET /docs is supplied by FastAPI automatically. It provides interactive
+OpenAPI documentation for the application endpoints.
+
+
+7. API ENDPOINTS
+================
+
+GET /
+------
+Purpose:
+    Confirms that the application is present and returns the project message.
+
+Input:
+    None.
+
+Output:
+    Welcome message and project description.
+
+GET /api/health
+---------------
+Implementation:
+    backend/app/routes/health.py -> health_check()
+
+Input:
+    None.
+
+Response:
+
+    {
+      "status": "healthy",
+      "service": "DeepGeneLens backend"
+    }
+
+POST /api/uploads/fasta
+-----------------------
+Implementation:
+    backend/app/routes/uploads.py -> upload_fasta()
+
+Input:
+    Multipart form field named "file".
+
+Accepted extensions:
+    .fasta, .fa, .fna
+
+Processing:
+
+1. Checks the extension.
+2. Reads the uploaded bytes.
+3. Calls summarize_fasta(content).
+4. Returns analysis JSON.
+
+Response shape:
+
+    {
+      "filename": "sample.fasta",
+      "message": "FASTA file uploaded and parsed successfully.",
+      "analysis_ready": true,
+      "sequence_count": 3,
+      "total_bases": 385,
+      "valid": true,
+      "invalid_base_count": 0,
+      "composition": {
+        "A": 25.71,
+        "T": 25.45,
+        "G": 25.71,
+        "C": 23.12
+      },
+      "gc_content": 48.83,
+      "records": [
+        {
+          "id": "sample_sequence_001",
+          "description": "sample_sequence_001",
+          "length": 129,
+          "gc_content": 46.84
+        }
+      ]
+    }
+
+Possible errors:
+
+- 415: unsupported file extension.
+- 422: empty file, invalid encoding, or no FASTA records.
+
+POST /api/analysis/predict
+--------------------------
+Implementation:
+    backend/app/routes/predict.py -> predict()
+
+Input:
+    Multipart form field named "file".
+
+Processing:
+
+1. Checks .fasta, .fa, or .fna extension.
+2. Parses the FASTA file with summarize_fasta.
+3. Rejects invalid DNA.
+4. Resolves the checkpoint path:
+   - MODEL_PATH environment variable, if configured.
+   - Otherwise repository artifacts/viral_family_cnn.pt.
+5. Loads the checkpoint with torch.load(..., map_location="cpu").
+6. Reads label_mapping and max_length from the checkpoint.
+7. Creates DNA1DCNN with the saved class count.
+8. Loads state_dict.
+9. Runs model.eval().
+10. Encodes each FASTA record.
+11. Runs inference with torch.no_grad().
+12. Applies softmax to logits.
+13. Selects the maximum probability.
+
+Response shape:
+
+    {
+      "filename": "sample.fasta",
+      "predictions": [
+        {
+          "sequence_id": "NC_025417",
+          "predicted_family": "Herelleviridae",
+          "confidence": 0.8904
+        }
+      ],
+      "model": {
+        "model_type": "PyTorch DNA 1D-CNN",
+        "max_length": 4096,
+        "class_count": 12,
+        "research_only": true
+      },
+      "research_only": true
+    }
+
+Confidence is the maximum softmax probability produced by the model. It is
+not a clinical certainty score and is not independently calibrated for
+clinical use.
+
+Possible errors:
+
+- 415: unsupported extension.
+- 422: malformed FASTA or invalid DNA.
+- 503: checkpoint is missing.
+
+POST /api/uploads/report
+------------------------
+Implementation:
+    backend/app/routes/uploads.py -> download_report()
+
+Required input:
+    Multipart form field "file".
+
+Optional input:
+    predictions_json: JSON list containing real prediction objects.
+    model_metadata_json: JSON object containing model metadata.
+
+Processing:
+
+1. Validates the extension.
+2. Parses FASTA and recalculates the statistics.
+3. Parses optional JSON fields.
+4. Calls build_analysis_pdf().
+5. Returns a StreamingResponse with media type application/pdf.
+
+If predictions_json is absent, the report contains no AI prediction table.
+This prevents fabricated predictions from appearing in a statistics-only
+report.
+
+Possible errors:
+
+- 415: unsupported extension.
+- 422: malformed FASTA or malformed optional JSON.
+
+
+8. FASTA PARSING AND DNA STATISTICS
+====================================
+
+Implementation file
+-------------------
+backend/app/bioinformatics/fasta.py
+
+Main function
+-------------
+
+summarize_fasta(content: bytes) -> dict[str, object]
+
+Input limits
+------------
+
+MAX_FASTA_BYTES is 10 * 1024 * 1024, which is 10 MB.
+
+The function rejects:
+
+- Empty content.
+- Files larger than 10 MB.
+- Invalid UTF-8.
+- Files with no FASTA records.
+
+Biopython parsing
+-----------------
+
+The implementation decodes the bytes as UTF-8 and calls:
+
+    SeqIO.parse(StringIO(decoded_content), "fasta")
+
+The result is converted to a list of SeqRecord objects.
+
+Record-level calculations
+-------------------------
+
+For each record:
+
+1. The sequence is converted to uppercase.
+2. Length is calculated with len(sequence).
+3. G count is sequence.count("G").
+4. C count is sequence.count("C").
+5. GC content is:
+
+       (G count + C count) / sequence length * 100
+
+6. The result is rounded to two decimal places.
+
+Global validation
+-----------------
+
+The implementation counts bases in A, T, G, and C.
+Every other character increments invalid_base_count.
+
+The entire upload is considered valid only when:
+
+    invalid_base_count == 0
+
+For example, the sequence:
+
+    ATGCXYZ
+
+has:
+
+- A = 1
+- T = 1
+- G = 1
+- C = 1
+- Invalid characters = 3
+- Total length = 7
+- GC content = (1 + 1) / 7 * 100 = 28.57%
+- valid = false
+
+The statistics endpoint reports invalid input, but the prediction endpoint
+rejects it with HTTP 422 because the CNN preprocessing contract supports only
+A, T, G, and C.
+
+Multiple FASTA records
+----------------------
+
+The parser processes all records in one file. It returns:
+
+- One record summary per FASTA record.
+- A combined total_bases value.
+- Combined nucleotide percentages.
+- Combined overall GC content.
+
+
+9. NCBI REFSEQ DATASET PIPELINE
+===============================
+
+Implementation file
+-------------------
+backend/app/datasets/refseq_viral.py
+
+Data source
+-----------
+
+- NCBI Nucleotide/RefSeq.
+- Accessed through Biopython Entrez E-utilities.
+- Query:
+
+  txid10239[Organism] AND refseq[filter] AND "complete genome"[Title]
+
+The manifest records the source URLs, query, timestamp, and NCBI policy
+notice.
+
+Taxonomy labels
+---------------
+
+The pipeline reads GenBank records and examines the taxonomy list. It chooses
+the last taxonomy item whose name ends with "viridae". This creates genuine
+viral family labels from NCBI taxonomy metadata rather than invented labels.
+
+Record filtering
+----------------
+
+Records are retained only when:
+
+- A DNA molecule type is present.
+- A viral family taxonomy label is available.
+- The sequence can be read.
+- The sequence is at least 500 bases.
+- Every base is A, T, G, or C.
+- The accession has not appeared before.
+- The exact sequence has not appeared before.
+
+Actual prepared dataset
+-----------------------
+
+The current manifest reports:
+
+- Search IDs requested: 3000.
+- Fetched records: 1679.
+- Cleaned records: 1607.
+- Selected records: 712.
+- Viral families: 12.
+- Train records: 495.
+- Validation records: 106.
+- Test records: 111.
+
+Families:
+
+1. Aliceevansviridae
+2. Anelloviridae
+3. Circoviridae
+4. Demerecviridae
+5. Drexlerviridae
+6. Genomoviridae
+7. Herelleviridae
+8. Kanorauviridae
+9. Peduoviridae
+10. Sarkviridae
+11. Schitoviridae
+12. Smacoviridae
+
+Removed records
+---------------
+
+The manifest records:
+
+- 72 invalid-DNA records.
+- 10 undefined-sequence records.
+
+Split leakage prevention
+------------------------
+
+The pipeline creates sequence-similarity groups using a 15-mer Jaccard
+similarity threshold of 0.95. It then keeps similar records in the same
+split group before creating train, validation, and test files.
+
+Manifest result:
+
+- Cluster count: 703.
+- Train/validation overlap: 0.
+- Train/test overlap: 0.
+- Validation/test overlap: 0.
+- leakage_free: true.
+
+Suitability
+-----------
+
+The manifest marks the dataset as suitable for a small experimental 1D-CNN
+baseline. It is not a clinically validated dataset and the 15-mer heuristic
+is not a replacement for phylogenetic analysis or ANI.
+
+Generated files
+---------------
+
+data/refseq_viral_large/raw/refseq_viral_dna.fasta
+    Downloaded raw DNA records.
+
+data/refseq_viral_large/processed/train.csv
+    Training records.
+
+data/refseq_viral_large/processed/validation.csv
+    Validation records.
+
+data/refseq_viral_large/processed/test.csv
+    Held-out test records.
+
+data/refseq_viral_large/manifests/manifest.json
+    Source, parameters, counts, checksums, and leakage result.
+
+data/refseq_viral_large/manifests/class_distribution.csv
+    Class counts for each split.
+
+data/refseq_viral_large/manifests/split_leakage_report.json
+    Similarity grouping and split-overlap report.
+
+
+10. CNN MODEL IMPLEMENTATION
+============================
+
+Implementation files
+--------------------
+
+- backend/app/models/cnn.py
+- backend/app/models/train_cnn.py
+- backend/app/routes/predict.py
+
+DNA encoding
+------------
+
+The encoder uses:
+
+    BASES = "ACGT"
+
+Each base maps to one channel:
+
+- A -> channel 0.
+- C -> channel 1.
+- G -> channel 2.
+- T -> channel 3.
+
+For max_length 4096, each sequence becomes a tensor with shape:
+
+    [4, 4096]
+
+Shorter sequences are zero-padded. Longer sequences are truncated to the first
+4096 bases. This exact preprocessing function is shared by training and
+inference.
+
+Model architecture
+------------------
+
+DNA1DCNN contains:
+
+1. Conv1d(4, 32, kernel_size=11, padding=5)
+2. ReLU
+3. MaxPool1d(4)
+4. Conv1d(32, 64, kernel_size=9, padding=4)
+5. ReLU
+6. MaxPool1d(4)
+7. Conv1d(64, 128, kernel_size=7, padding=3)
+8. ReLU
+9. AdaptiveMaxPool1d(1)
+10. Flatten
+11. Dropout(0.25)
+12. Linear(128, class_count)
+
+The current class count is 12.
+
+Training
+--------
+
+train_cnn.py:
+
+1. Sets deterministic random seeds.
+2. Loads train.csv, validation.csv, and test.csv.
+3. Creates a sorted family-to-index label mapping.
+4. Builds SequenceDataset instances.
+5. Uses DataLoader for batches.
+6. Uses CPU or CUDA automatically when available.
+7. Calculates class weights from training counts.
+8. Uses weighted CrossEntropyLoss.
+9. Uses Adam optimizer with learning rate 0.001.
+10. Runs 12 epochs in the saved experiment.
+11. Tracks training and validation loss.
+12. Keeps the state with the best validation loss.
+13. Evaluates that state on the held-out test set.
+14. Saves the checkpoint and metrics metadata.
+
+Checkpoint contents
+-------------------
+
+artifacts/viral_family_cnn.pt contains:
+
+- state_dict.
+- label_mapping.
+- max_length.
+- metadata.
+
+artifacts/viral_family_cnn.metrics.json contains:
+
+- Model type.
+- Device.
+- Epoch count.
+- Batch size.
+- Learning rate.
+- Seed.
+- Class count.
+- Label mapping.
+- Training history.
+- Test metrics.
+- Research-only flag.
+
+Measured held-out metrics
+-------------------------
+
+These are actual saved test metrics for the current snapshot:
+
+- Accuracy: 63.9639%.
+- Weighted precision: 63.5921%.
+- Weighted recall: 63.9639%.
+- Weighted F1: 59.7481%.
+- Test records: 111.
+
+These metrics describe the held-out dataset experiment. They are not a
+guaranteed accuracy for a new uploaded sequence and are not clinical
+performance claims.
+
+
+11. REAL PREDICTION WORKFLOW
+============================
+
+Complete sequence
+-----------------
+
+User selects:
+    sample.fasta
+
+React:
+    Creates FormData and sends the file to /api/analysis/predict.
+
+FastAPI:
+    Checks extension and reads bytes.
+
+Biopython:
+    Parses each FASTA record.
+
+Validation:
+    Invalid bases cause HTTP 422 for prediction.
+
+Checkpoint:
+    viral_family_cnn.pt is loaded using CPU mapping.
+
+Preprocessing:
+    Each sequence is uppercased, encoded into four channels, padded or
+    truncated to 4096 bases.
+
+Inference:
+    The model returns logits. torch.softmax converts logits to probabilities.
+
+Selection:
+    The maximum probability identifies the predicted family.
+
+Response:
+    React receives sequence_id, predicted_family, confidence, and model
+    metadata.
+
+Confidence calculation
+----------------------
+
+For a logits vector z, the probability for class i is:
+
+    softmax(z_i) = exp(z_i) / sum(exp(z_j))
+
+The API returns:
+
+    confidence = max(softmax(logits))
+
+The value is rounded to four decimal places in the JSON response.
+
+
+12. PDF REPORT IMPLEMENTATION
+=============================
+
+Implementation file
+-------------------
+backend/app/reports/pdf.py
+
+Report engine
+-------------
+
+The report uses ReportLab:
+
+- BaseDocTemplate.
+- PageTemplate.
+- Frame.
+- Paragraph.
+- Table.
+- TableStyle.
+- PageBreak.
+- Custom Flowable classes.
+
+Report sections
+---------------
+
+Cover page
+    Includes DeepGeneLens branding, DNA Sequence Analysis Report title,
+    AI-Powered Genomic Analysis subtitle, research prototype label, uploaded
+    filename, generation time, and project description.
+
+Executive summary
+    Contains KPI cards for total sequences, total bases, validation status,
+    and overall GC content.
+
+DNA composition analysis
+    Contains measured A/T/G/C percentages, a horizontal composition bar, and
+    a donut-style chart with GC content in the centre.
+
+Sequence details
+    Contains a table with sequence ID, length, GC content, and validation
+    status. The table header repeats when the table spans pages.
+
+AI prediction results
+    Included only when valid predictions_json is supplied. Each row contains
+    sequence ID, predicted family, confidence, and research-output status.
+
+Model information
+    Displays model architecture, class count, preprocessing length, actual
+    held-out metrics, and experimental status.
+
+Responsible research notice
+    States that predictions are not clinically validated and must not be used
+    for medical diagnosis or treatment decisions.
+
+Brand logo
+---------
+
+The PDF cover uses _draw_logo():
+
+- Orange circular mark.
+- White DNA double-helix curves.
+- Horizontal DNA rungs.
+- White outer lens ring.
+
+This is a vector drawing generated by ReportLab and does not depend on an
+external image file.
+
+Truthfulness rules
+------------------
+
+- Statistics are generated from the uploaded FASTA.
+- AI rows appear only when real prediction metadata is supplied.
+- Model metrics are loaded from the actual checkpoint metrics JSON when
+  metadata is not passed explicitly.
+- Missing model metadata is displayed as "Not available" rather than using
+  invented values.
+
+
+13. ERROR HANDLING
+==================
+
+Invalid extension
+-----------------
+The upload and prediction routes return HTTP 415.
+
+Empty or malformed FASTA
+------------------------
+The parser raises FastaParseError, which the routes convert to HTTP 422.
+
+Invalid DNA
+-----------
+The statistics endpoint returns valid=false and invalid_base_count. The
+prediction endpoint rejects the same data with HTTP 422 because the trained
+model accepts only A, T, G, and C.
+
+Missing checkpoint
+------------------
+The prediction endpoint returns HTTP 503:
+
+    No trained model is installed. Prediction is unavailable.
+
+Malformed PDF metadata
+----------------------
+Malformed predictions_json or model_metadata_json returns HTTP 422. The
+backend does not silently ignore malformed metadata.
+
+Frontend connection failure
+---------------------------
+If the backend is not running on the configured URL, the health indicator
+shows Backend unavailable and requests fail. The frontend does not fabricate
+success responses.
+
+
+14. LOCAL EXECUTION
+===================
+
+Backend setup
+-------------
+
+PowerShell:
+
+    cd C:\Users\surul\OneDrive\Desktop\deepgene-lens\backend
+    python -m venv .venv
+    .\.venv\Scripts\Activate.ps1
+    pip install -r requirements.txt
+    Copy-Item .env.example .env
+    python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+Backend URLs:
+
+- http://localhost:8000/
+- http://localhost:8000/api/health
+- http://localhost:8000/docs
+
+Frontend setup
+--------------
+
+Install Node.js first if npm is unavailable.
+
+PowerShell:
+
+    cd C:\Users\surul\OneDrive\Desktop\deepgene-lens\frontend
+    npm install
+    npm run dev
+
+Frontend URL:
+
+    http://localhost:5173/
+
+Production build:
+
+    npm run build
+
+Optional frontend environment
+-----------------------------
+
+Create frontend/.env:
+
+    VITE_API_BASE_URL=http://localhost:8000
+
+Optional backend environment
+----------------------------
+
+Create backend/.env:
+
+    APP_NAME=DeepGeneLens
+    FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+
+Optional model override:
+
+    MODEL_PATH=C:\path\to\viral_family_cnn.pt
+
+
+15. TRAINING AND DATASET COMMANDS
+=================================
+
+Prepare a RefSeq dataset
+------------------------
+
+From backend:
+
+    .\.venv\Scripts\Activate.ps1
+    python -m app.datasets.refseq_viral --output ..\data\refseq_viral --max-records 500 --max-families 8 --per-family 20 --min-length 500
+
+Train the CNN
+-------------
+
+    python -m app.models.train_cnn --dataset ..\data\refseq_viral_large --model ..\artifacts\viral_family_cnn.pt --max-length 4096 --epochs 12
+
+Do not retrain the verified checkpoint unless a new experiment is intended.
+Retraining can change model weights and metrics.
+
+
+16. TESTING THE COMPLETE SYSTEM
+===============================
+
+Health test
+-----------
+
+Open:
+
+    http://localhost:8000/api/health
+
+Expected:
+
+    {"status":"healthy","service":"DeepGeneLens backend"}
+
+Frontend test
+-------------
+
+1. Start backend.
+2. Start frontend.
+3. Open http://localhost:5173.
+4. Confirm Backend healthy is shown.
+
+FASTA statistics test
+---------------------
+
+1. Select a .fasta file.
+2. Click Analyze DNA.
+3. Confirm sequence count and total bases.
+4. Confirm A/T/G/C percentages.
+5. Confirm GC content.
+6. Confirm sequence detail rows.
+
+Prediction test
+---------------
+
+1. Use a valid FASTA containing only A, T, G, and C.
+2. Analyze the file.
+3. Click Run trained model.
+4. Confirm a predicted family and confidence are displayed.
+5. Confirm model metadata is shown as research-only.
+
+Invalid DNA test
+----------------
+
+Use:
+
+    >bad
+    ATGCXYZ
+
+Expected statistics:
+
+- valid=false.
+- invalid_base_count=3.
+
+Expected prediction result:
+
+- HTTP 422.
+- Prediction requires sequences containing only A, T, G, and C.
+
+PDF test
+--------
+
+1. Analyze a FASTA file.
+2. Download PDF before prediction.
+3. Confirm the PDF contains statistics but no fabricated AI table.
+4. Run the real model.
+5. Download PDF again.
+6. Confirm the prediction table is present.
+7. Confirm model metrics match the saved metrics metadata.
+
+Frontend build test
+-------------------
+
+    npm run build
+
+Backend syntax test
+-------------------
+
+    .\.venv\Scripts\python.exe -m compileall -q app
+
+
+17. VERIFIED PROJECT STATUS
+===========================
+
+Feature                         Status       Actual implementation
+---------------------------------------------------------------------------
+React/Vite frontend             Complete     App.jsx, styles.css, Vite
+FastAPI backend                 Complete     main.py and route modules
+CORS                            Complete     Configurable local origins
+Health endpoint                 Complete     GET /api/health
+FASTA upload                    Complete     Biopython SeqIO parsing
+DNA validation                  Complete     A/T/G/C validation
+DNA statistics                  Complete     Counts and GC calculations
+Multiple FASTA records          Complete     Per-record and global results
+RefSeq acquisition              Complete     Entrez/GenBank pipeline
+Taxonomy family labels          Complete     NCBI taxonomy-derived labels
+Duplicate removal               Complete     Accession and exact sequence
+Leakage-aware splits            Complete     15-mer similarity grouping
+1D-CNN architecture             Complete     PyTorch DNA1DCNN
+CNN training                    Complete     train_cnn.py
+Saved checkpoint                Complete     artifacts/viral_family_cnn.pt
+Real prediction API             Complete     POST /api/analysis/predict
+PDF generation                  Complete     ReportLab multi-page report
+Prediction in PDF               Complete     Optional real metadata only
+Explainability                  Future       No attribution algorithm wired
+CNN-LSTM                        Future       Prepared concept only
+DNABERT                         Future       Prepared concept only
+PostgreSQL                      Future       Not integrated
+Authentication                  Future       Not integrated
+History                         Future       Not integrated
+Clinical validation             Not available  Research prototype only
+
+
+18. PROJECT LIMITATIONS
+=======================
+
+1. The model was trained on a finite RefSeq snapshot.
+2. The dataset represents selected viral DNA records, not all pathogens.
+3. The model truncates sequences longer than 4096 bases.
+4. Confidence values are softmax probabilities, not clinical calibration.
+5. The 15-mer leakage heuristic is not a phylogenetic analysis.
+6. No external validation dataset is currently connected.
+7. No user database or persistent analysis history exists.
+8. Uploaded files are processed by the request and are not designed as a
+   persistent clinical data store.
+9. Explainability is not implemented despite the reserved folder.
+10. The application must not be used for diagnosis or treatment decisions.
+
+
+19. VIVA / PROJECT PRESENTATION EXPLANATION
+===========================================
+
+Short explanation
+-----------------
+DeepGeneLens is a web-based research prototype that analyses DNA FASTA files.
+The FastAPI backend uses Biopython to parse sequences and calculate nucleotide
+statistics. A PyTorch 1D-CNN trained on taxonomy-labelled NCBI RefSeq viral
+genomes can optionally predict an experimental viral family. React provides
+the user interface, and ReportLab generates a scientific PDF report.
+
+Why FASTA?
+----------
+FASTA is a standard plain-text format for biological sequences. One file can
+contain multiple records. Each record has a header beginning with ">" followed
+by its nucleotide sequence.
+
+Why Biopython?
+-------------
+Biopython provides tested parsers for FASTA and GenBank data, avoiding a
+custom parser for standard biological formats.
+
+Why one-hot encoding?
+---------------------
+DNA has four principal bases. One-hot encoding represents each base as one of
+four channels, allowing a convolutional network to learn local sequence
+patterns.
+
+Why a 1D-CNN?
+-------------
+A 1D-CNN can detect local patterns in an ordered sequence. Convolution filters
+slide along the nucleotide positions and learn features useful for the
+experimental family-classification task.
+
+Why is the result research-only?
+-------------------------------
+The model has limited data, finite class coverage, no clinical validation,
+and no guarantee that a new sequence belongs to the training distribution.
+Therefore the output is a research prediction, not a medical diagnosis.
+
+What happens if the model file is missing?
+------------------------------------------
+The API returns HTTP 503 and clearly states that prediction is unavailable.
+It does not generate a fake fallback prediction.
+
+What is the most important design principle?
+--------------------------------------------
+The application separates measured sequence statistics from experimental AI
+predictions. Statistics come directly from the uploaded file. AI results are
+shown only when the real trained checkpoint produces them. Missing or invalid
+information is reported explicitly instead of being fabricated.
+
+
+20. SOURCE REFERENCE SUMMARY
+============================
+
+Core application:
+
+- backend/app/main.py
+- backend/app/config.py
+- frontend/src/App.jsx
+- frontend/src/main.jsx
+- frontend/src/styles.css
+
+Bioinformatics:
+
+- backend/app/bioinformatics/fasta.py
+- backend/app/datasets/refseq_viral.py
+
+Machine learning:
+
+- backend/app/models/cnn.py
+- backend/app/models/train_cnn.py
+- backend/app/routes/predict.py
+
+Reports:
+
+- backend/app/reports/pdf.py
+- backend/app/routes/uploads.py
+
+Data and model artifacts:
+
+- data/refseq_viral_large/manifests/manifest.json
+- data/refseq_viral_large/processed/train.csv
+- data/refseq_viral_large/processed/validation.csv
+- data/refseq_viral_large/processed/test.csv
+- artifacts/viral_family_cnn.pt
+- artifacts/viral_family_cnn.metrics.json
+
+End of documentation
+====================

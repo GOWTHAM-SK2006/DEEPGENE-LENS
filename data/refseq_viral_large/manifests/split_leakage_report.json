@@ -1,0 +1,15 @@
+{
+  "cluster_method": "15-mer Jaccard similarity >= 0.95",
+  "cluster_count": 703,
+  "split_group_counts": {
+    "train": 491,
+    "validation": 106,
+    "test": 106
+  },
+  "overlap_counts": {
+    "train_validation": 0,
+    "train_test": 0,
+    "validation_test": 0
+  },
+  "leakage_free": true
+}

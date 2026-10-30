@@ -1,0 +1,262 @@
+DeepGeneLens - Final Implemented Workflow
+==========================================
+
+This file contains the current verified implementation only. Old planned,
+outdated, and placeholder descriptions have been removed.
+
+
+1. Application
+--------------
+
+Frontend:
+- React + Vite responsive dashboard
+- FASTA upload
+- DNA statistics display
+- Real trained-model prediction display
+- PDF report download
+- Backend health status
+- Research-prototype warnings
+
+Backend:
+- FastAPI + Uvicorn
+- CORS support for localhost:5173 and 127.0.0.1:5173
+- GET /
+- GET /api/health
+- POST /api/uploads/fasta
+- POST /api/uploads/report
+- POST /api/analysis/predict
+
+
+2. FASTA Analysis Workflow
+--------------------------
+
+1. User selects a .fasta, .fa, or .fna file.
+2. React sends the file as multipart FormData.
+3. FastAPI receives and validates the file.
+4. Biopython SeqIO parses all FASTA records.
+5. DNA characters are validated.
+6. The backend calculates sequence IDs, lengths, total bases, A/T/G/C
+   composition, per-sequence GC content, overall GC content, and invalid
+   base count.
+7. JSON results are returned to React.
+8. React displays the analysis dashboard.
+
+Source files:
+- frontend/src/App.jsx
+- frontend/src/styles.css
+- backend/app/bioinformatics/fasta.py
+- backend/app/routes/uploads.py
+
+
+3. Real NCBI RefSeq Dataset
+---------------------------
+
+Source:
+- NCBI RefSeq viral complete genomes
+- https://www.ncbi.nlm.nih.gov/refseq/
+- Query:
+  txid10239[Organism] AND refseq[filter] AND "complete genome"[Title]
+
+Pipeline source:
+- backend/app/datasets/refseq_viral.py
+
+Processing:
+- Fetch GenBank records and taxonomy metadata.
+- Extract genuine taxonomy family labels ending in "viridae".
+- Keep DNA sequences only.
+- Remove undefined, invalid, duplicate, and short sequences.
+- Create cluster-aware train, validation, and test splits.
+- Generate manifest, class distribution, and leakage reports.
+
+Actual statistics:
+- IDs queried: 3,000
+- Records fetched: 1,679
+- Cleaned records: 1,607
+- Selected records: 712
+- Families: 12
+- Train: 495
+- Validation: 106
+- Test: 111
+- Invalid DNA removed: 72
+- Undefined records removed: 10
+
+Dataset files:
+- data/refseq_viral_large/raw/refseq_viral_dna.fasta
+- data/refseq_viral_large/processed/train.csv
+- data/refseq_viral_large/processed/validation.csv
+- data/refseq_viral_large/processed/test.csv
+- data/refseq_viral_large/manifests/manifest.json
+- data/refseq_viral_large/manifests/class_distribution.csv
+- data/refseq_viral_large/manifests/split_leakage_report.json
+
+
+4. Leakage Verification
+------------------------
+
+- Similarity method: 15-mer Jaccard similarity, threshold 0.95
+- Clusters: 703
+- Train/validation overlap: 0
+- Train/test overlap: 0
+- Validation/test overlap: 0
+- Leakage-free result: PASS
+
+This is a research-prototype heuristic, not a replacement for full
+phylogenetic, BLAST, or ANI analysis.
+
+
+5. Real 1D-CNN
+--------------
+
+Source files:
+- backend/app/models/cnn.py
+- backend/app/models/train_cnn.py
+
+Implementation:
+- PyTorch 1D-CNN
+- One-hot A/C/G/T encoding
+- Conv1D layers with 32, 64, and 128 filters
+- Max pooling and adaptive max pooling
+- Dropout classifier
+- 12 viral-family classes
+
+Preprocessing:
+- Maximum length: 4,096 bases
+- Longer sequences are truncated.
+- Shorter sequences are zero-padded.
+- Training and inference share the same encoder.
+- Invalid sequences are rejected.
+
+Training configuration:
+- Epochs: 12
+- Batch size: 8
+- Optimizer: Adam
+- Learning rate: 0.001
+- Class-weighted cross-entropy
+- CPU training completed
+
+Model files:
+- artifacts/viral_family_cnn.pt
+- artifacts/viral_family_cnn.metrics.json
+
+
+6. Measured Model Metrics
+-------------------------
+
+Held-out test set:
+- Test sequences: 111
+- Accuracy: 0.6396
+- Weighted precision: 0.6359
+- Weighted recall: 0.6396
+- Weighted F1-score: 0.5975
+
+These are experimental research metrics, not clinical accuracy or diagnostic
+validation.
+
+
+7. Prediction API
+-----------------
+
+Endpoint:
+- POST /api/analysis/predict
+
+Input:
+- Multipart FASTA file
+- Supported extensions: .fasta, .fa, .fna
+
+Processing:
+1. Validate extension.
+2. Parse FASTA with Biopython.
+3. Reject characters outside A, T, G, and C.
+4. Load the saved PyTorch checkpoint.
+5. Apply the saved 4,096-base preprocessing.
+6. Run inference.
+7. Return prediction for every sequence.
+
+Response includes:
+- Sequence ID
+- Predicted viral family
+- Confidence from model softmax probability
+- Model metadata
+- research_only = true
+
+Error handling:
+- Invalid DNA: HTTP 422
+- Missing model: HTTP 503
+- Unsupported extension: HTTP 415
+
+
+8. Verified End-to-End Test
+----------------------------
+
+Five real records were selected from test.csv, converted to FASTA files,
+uploaded through the React interface, and sent through the real FastAPI
+prediction endpoint.
+
+| Sequence | Actual family | Predicted family | Confidence | Result |
+|----------|---------------|------------------|------------|--------|
+| NC_025417 | Herelleviridae | Herelleviridae | 89.04% | Correct |
+| NC_028944 | Herelleviridae | Herelleviridae | 49.50% | Correct |
+| NC_047720 | Herelleviridae | Herelleviridae | 65.93% | Correct |
+| NC_047726 | Herelleviridae | Herelleviridae | 94.77% | Correct |
+| NC_047729 | Herelleviridae | Herelleviridae | 86.75% | Correct |
+
+Verification result:
+- Correct predictions: 5/5
+- API predictions matched independent checkpoint inference: PASS
+- API confidence matched actual softmax probabilities: PASS
+- React upload flow: PASS for all five files
+- React trained-model flow: PASS for all five files
+- No model or dataset changes during verification
+
+Detailed evidence:
+- verification_artifacts/VERIFICATION_REPORT.txt
+- verification_artifacts/api_comparison.json
+- verification_artifacts/expected_predictions.json
+- verification_artifacts/api_response_1.json through api_response_5.json
+
+
+9. Existing Feature Verification
+--------------------------------
+
+- GET /api/health: PASS
+- FASTA statistics upload: PASS
+- DNA validation: PASS
+- PDF report generation: PASS
+- PDF content type: application/pdf
+- PDF signature: %PDF- verified
+- Invalid DNA rejection: HTTP 422 PASS
+- Missing checkpoint handling: HTTP 503 PASS
+- Frontend production build: PASS
+
+
+10. Latest UI and CORS Fixes
+----------------------------
+
+Updated files:
+- frontend/src/App.jsx
+- backend/app/config.py
+- backend/.env.example
+
+Changes:
+- Removed stale "SIMULATED / DEMO ONLY" wording when the trained model runs.
+- Real prediction state now displays "RESEARCH MODEL".
+- Active prediction text identifies the installed experimental PyTorch model.
+- Added CORS support for both localhost:5173 and 127.0.0.1:5173.
+- Frontend build passed after these changes.
+- Backend syntax validation passed after these changes.
+
+
+11. Current Limitations
+-----------------------
+
+Not implemented:
+- Explainable AI feature attribution
+- CNN-LSTM
+- DNABERT
+- PostgreSQL
+- User registration and login
+- Analysis history
+- Clinical validation
+
+The current model is an experimental research baseline and must not be used
+for medical diagnosis or clinical decision-making.

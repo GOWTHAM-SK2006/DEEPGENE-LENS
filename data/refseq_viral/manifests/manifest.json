@@ -1,0 +1,69 @@
+{
+  "dataset_name": "NCBI RefSeq viral complete-genome DNA snapshot",
+  "source": "NCBI Nucleotide/RefSeq via Entrez E-utilities",
+  "source_url": "https://www.ncbi.nlm.nih.gov/refseq/",
+  "search_url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/",
+  "query": "txid10239[Organism] AND refseq[filter] AND \"complete genome\"[Title]",
+  "downloaded_at_utc": "2026-10-30T16:35:20.952522+00:00",
+  "ncbi_email": "deepgenelens@example.com",
+  "license_notice": "NCBI data may include records with source-specific terms. Review NCBI policies and original record attribution before redistribution.",
+  "ncbi_policy_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
+  "parameters": {
+    "max_records_requested": 500,
+    "max_families": 8,
+    "max_records_per_family": 20,
+    "minimum_length": 500,
+    "random_seed": 42,
+    "kmer_size": 15,
+    "similarity_threshold": 0.95
+  },
+  "counts": {
+    "search_ids": 500,
+    "fetched_records": 242,
+    "cleaned_records": 235,
+    "selected_records": 106,
+    "selected_families": 8,
+    "train_records": 72,
+    "validation_records": 17,
+    "test_records": 17
+  },
+  "removals": {
+    "invalid_dna": 7,
+    "undefined_sequence": 4
+  },
+  "families": [
+    "Draupnirviridae",
+    "Drexlerviridae",
+    "Gandrviridae",
+    "Geplanaviridae",
+    "Kanorauviridae",
+    "Naryaviridae",
+    "Ouroboviridae",
+    "Smacoviridae"
+  ],
+  "files": {
+    "manifests\\class_distribution.csv": "aadfbedfc830bb317ead99fc12dd68624238aae64072b902e10fe858404ac116",
+    "manifests\\split_leakage_report.json": "46bf28a4497fd10eea4709243b38f30a6bcba19d472a2a5461e6021475f62841",
+    "processed\\test.csv": "8151ec18b73ed696082baf306264ca582fb082a09eec34213e81fa4c5f4908f1",
+    "processed\\train.csv": "2ba4daaeb386185e849d7d3c06d89d5d3d627b924007c1ddc3fc593bbd0bb24b",
+    "processed\\validation.csv": "2145712e24e84aabeaf04fc1679719181bf23d0dc49b333f2b29c77cd77fcbb2",
+    "raw\\refseq_viral_dna.fasta": "04b75ca3b75dfaab3c8efc5fa1b32031f9d38af31a6cb6654333a750cb03c341"
+  },
+  "leakage_check": {
+    "cluster_method": "15-mer Jaccard similarity >= 0.95",
+    "cluster_count": 106,
+    "split_group_counts": {
+      "train": 72,
+      "validation": 17,
+      "test": 17
+    },
+    "overlap_counts": {
+      "train_validation": 0,
+      "train_test": 0,
+      "validation_test": 0
+    },
+    "leakage_free": true
+  },
+  "suitable_for_1d_cnn": true,
+  "suitability_reason": "Suitable for a small experimental 1D-CNN baseline; not clinically validated."
+}

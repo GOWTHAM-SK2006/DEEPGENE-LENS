@@ -1,0 +1,73 @@
+{
+  "dataset_name": "NCBI RefSeq viral complete-genome DNA snapshot",
+  "source": "NCBI Nucleotide/RefSeq via Entrez E-utilities",
+  "source_url": "https://www.ncbi.nlm.nih.gov/refseq/",
+  "search_url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/",
+  "query": "txid10239[Organism] AND refseq[filter] AND \"complete genome\"[Title]",
+  "downloaded_at_utc": "2026-10-30T16:37:38.130690+00:00",
+  "ncbi_email": "deepgenelens@example.com",
+  "license_notice": "NCBI data may include records with source-specific terms. Review NCBI policies and original record attribution before redistribution.",
+  "ncbi_policy_url": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
+  "parameters": {
+    "max_records_requested": 3000,
+    "max_families": 12,
+    "max_records_per_family": 80,
+    "minimum_length": 500,
+    "random_seed": 42,
+    "kmer_size": 15,
+    "similarity_threshold": 0.95
+  },
+  "counts": {
+    "search_ids": 3000,
+    "fetched_records": 1679,
+    "cleaned_records": 1607,
+    "selected_records": 712,
+    "selected_families": 12,
+    "train_records": 495,
+    "validation_records": 106,
+    "test_records": 111
+  },
+  "removals": {
+    "invalid_dna": 72,
+    "undefined_sequence": 10
+  },
+  "families": [
+    "Aliceevansviridae",
+    "Anelloviridae",
+    "Circoviridae",
+    "Demerecviridae",
+    "Drexlerviridae",
+    "Genomoviridae",
+    "Herelleviridae",
+    "Kanorauviridae",
+    "Peduoviridae",
+    "Sarkviridae",
+    "Schitoviridae",
+    "Smacoviridae"
+  ],
+  "files": {
+    "manifests\\class_distribution.csv": "c357c4ea3b86b29d4eb05fc9f8dc94482300433dbe4958e04a3dcb2ae12fb104",
+    "manifests\\split_leakage_report.json": "b596be37de79d94f0945d0a36c3c9b9feb5c453757df5be3088ecd05484027f4",
+    "processed\\test.csv": "9bd46e8a5de8b79989d411818142f88fc192407083d53a79ee3cfd3cc319aa31",
+    "processed\\train.csv": "24dfc5154de4dcf30de16ce57f603f9e144b38ef0ecccc77c632864dcbcceb69",
+    "processed\\validation.csv": "7cc670ba5b82beb7d843c5c5fa74758d8fa5d54916bd54ecf9c646e7c38b5503",
+    "raw\\refseq_viral_dna.fasta": "b0182185d1406842c5038c5594a0ba9bad8267a249a676d3e9720791718d0002"
+  },
+  "leakage_check": {
+    "cluster_method": "15-mer Jaccard similarity >= 0.95",
+    "cluster_count": 703,
+    "split_group_counts": {
+      "train": 491,
+      "validation": 106,
+      "test": 106
+    },
+    "overlap_counts": {
+      "train_validation": 0,
+      "train_test": 0,
+      "validation_test": 0
+    },
+    "leakage_free": true
+  },
+  "suitable_for_1d_cnn": true,
+  "suitability_reason": "Suitable for a small experimental 1D-CNN baseline; not clinically validated."
+}

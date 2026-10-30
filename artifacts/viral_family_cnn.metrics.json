@@ -1,0 +1,350 @@
+{
+  "model_type": "PyTorch DNA 1D-CNN",
+  "device": "cpu",
+  "epochs": 12,
+  "batch_size": 8,
+  "learning_rate": 0.001,
+  "max_length": 4096,
+  "seed": 42,
+  "class_count": 12,
+  "label_mapping": {
+    "Aliceevansviridae": 0,
+    "Anelloviridae": 1,
+    "Circoviridae": 2,
+    "Demerecviridae": 3,
+    "Drexlerviridae": 4,
+    "Genomoviridae": 5,
+    "Herelleviridae": 6,
+    "Kanorauviridae": 7,
+    "Peduoviridae": 8,
+    "Sarkviridae": 9,
+    "Schitoviridae": 10,
+    "Smacoviridae": 11
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 2.482929375195744,
+      "validation_loss": 2.3924936033644766
+    },
+    {
+      "epoch": 2,
+      "train_loss": 2.1204995653846046,
+      "validation_loss": 1.8837962105589092
+    },
+    {
+      "epoch": 3,
+      "train_loss": 1.8614816155096496,
+      "validation_loss": 1.6813378424014684
+    },
+    {
+      "epoch": 4,
+      "train_loss": 1.6612807986712215,
+      "validation_loss": 1.508466533894809
+    },
+    {
+      "epoch": 5,
+      "train_loss": 1.4730472514123627,
+      "validation_loss": 1.3752662438266683
+    },
+    {
+      "epoch": 6,
+      "train_loss": 1.3238869905471802,
+      "validation_loss": 1.4232099461105634
+    },
+    {
+      "epoch": 7,
+      "train_loss": 1.276234788846488,
+      "validation_loss": 1.21330308239415
+    },
+    {
+      "epoch": 8,
+      "train_loss": 1.1861567750121609,
+      "validation_loss": 1.2034527175831344
+    },
+    {
+      "epoch": 9,
+      "train_loss": 1.1796512490571147,
+      "validation_loss": 1.145326848299998
+    },
+    {
+      "epoch": 10,
+      "train_loss": 1.0996300372210417,
+      "validation_loss": 1.1561226147525716
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.9834800720214844,
+      "validation_loss": 1.1977803656515085
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.9797313014666239,
+      "validation_loss": 1.0781124177968726
+    }
+  ],
+  "test_metrics": {
+    "accuracy": 0.6396396396396397,
+    "precision_weighted": 0.635920535920536,
+    "recall_weighted": 0.6396396396396397,
+    "f1_weighted": 0.5974813774813775,
+    "confusion_matrix": [
+      [
+        12,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        8,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        4,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        6,
+        2,
+        0,
+        2,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        2,
+        9,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        11,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        2
+      ],
+      [
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        2,
+        2,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4
+      ]
+    ],
+    "classification_report": {
+      "Aliceevansviridae": {
+        "precision": 0.8,
+        "recall": 1.0,
+        "f1-score": 0.8888888888888888,
+        "support": 12.0
+      },
+      "Anelloviridae": {
+        "precision": 0.5,
+        "recall": 0.8888888888888888,
+        "f1-score": 0.64,
+        "support": 9.0
+      },
+      "Circoviridae": {
+        "precision": 1.0,
+        "recall": 0.5555555555555556,
+        "f1-score": 0.7142857142857143,
+        "support": 9.0
+      },
+      "Demerecviridae": {
+        "precision": 0.75,
+        "recall": 0.5,
+        "f1-score": 0.6,
+        "support": 12.0
+      },
+      "Drexlerviridae": {
+        "precision": 0.25,
+        "recall": 0.08333333333333333,
+        "f1-score": 0.125,
+        "support": 12.0
+      },
+      "Genomoviridae": {
+        "precision": 0.8461538461538461,
+        "recall": 0.9166666666666666,
+        "f1-score": 0.88,
+        "support": 12.0
+      },
+      "Herelleviridae": {
+        "precision": 0.8333333333333334,
+        "recall": 1.0,
+        "f1-score": 0.9090909090909091,
+        "support": 10.0
+      },
+      "Kanorauviridae": {
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1-score": 0.5,
+        "support": 6.0
+      },
+      "Peduoviridae": {
+        "precision": 0.5,
+        "recall": 0.3333333333333333,
+        "f1-score": 0.4,
+        "support": 6.0
+      },
+      "Sarkviridae": {
+        "precision": 0.4,
+        "recall": 1.0,
+        "f1-score": 0.5714285714285714,
+        "support": 10.0
+      },
+      "Schitoviridae": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 6.0
+      },
+      "Smacoviridae": {
+        "precision": 0.5714285714285714,
+        "recall": 0.5714285714285714,
+        "f1-score": 0.5714285714285714,
+        "support": 7.0
+      },
+      "accuracy": 0.6396396396396397,
+      "macro avg": {
+        "precision": 0.6209096459096459,
+        "recall": 0.5985449735449735,
+        "f1-score": 0.5666768879268879,
+        "support": 111.0
+      },
+      "weighted avg": {
+        "precision": 0.635920535920536,
+        "recall": 0.6396396396396397,
+        "f1-score": 0.5974813774813775,
+        "support": 111.0
+      }
+    }
+  },
+  "research_only": true
+}
